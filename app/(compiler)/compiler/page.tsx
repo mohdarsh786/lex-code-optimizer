@@ -27,6 +27,8 @@ import { useRef, useState, useEffect } from "react"
 import type { editor } from "monaco-editor"
 import { Drawervalue } from "@/components/store"
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000"
+
 export default function CompilerEditor() {
   const router = useRouter()
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
@@ -46,10 +48,13 @@ export default function CompilerEditor() {
 
   async function fetchHistory() {
     try {
-      const res = await fetch("http://localhost:8000/history", { cache: "no-store" })
+      const res = await fetch(`${API_BASE_URL}/history`, { cache: "no-store" })
+      if (!res.ok) {
+        throw new Error(`history fetch failed with status ${res.status}`)
+      }
       setHistory(await res.json())
-    } catch {
-      console.error("could not fetch history")
+    } catch (error) {
+      console.error("could not fetch history", error)
     }
   }
 
@@ -59,13 +64,20 @@ export default function CompilerEditor() {
     setLoading(true)
     setCompileOutput("")
     try {
-      const res = await fetch("http://localhost:8000/optimize", {
+      const res = await fetch(`${API_BASE_URL}/optimize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code }),
       })
+      if (!res.ok) {
+        throw new Error(`optimize failed with status ${res.status}`)
+      }
       const data = await res.json()
-      setCompileOutput(data.normal_output?.stdout || data.normal_output?.stderr || "no output")
+      setCompileOutput(
+        data.normal_output?.stdout ||
+        data.normal_output?.stderr ||
+        "Program ran successfully, but it printed no output. Add printf/cout to print values."
+      )
       setOptimizerResult(data)
     } catch {
       setCompileOutput("could not reach backend — is uvicorn running?")
@@ -109,14 +121,14 @@ export default function CompilerEditor() {
               </DrawerTitle>
               <DrawerDescription className="text-base text-zinc-400 px-[61px]">stdout and stderr from g++ compilation and execution</DrawerDescription>
             </DrawerHeader>
-            <pre className="mx-6 mb-4 p-4 rounded-[23px] bg-black text-green-400 text-sm font-mono min-h-[200px] max-h-[400px] overflow-auto no-scrollbar whitespace-pre-wrap shadow-[0px_1px_7px_0px_rgb(255,255,255)]">
+            <div className="mx-6 mb-4 p-4 rounded-[23px] bg-black text-green-400 text-sm font-mono min-h-[200px] max-h-[400px] overflow-auto no-scrollbar whitespace-pre-wrap shadow-[0px_1px_7px_0px_rgb(255,255,255)]">
               {compileOutput ||<div className="w-full flex flex-col items-center justify-start space-y-7 py-3">
               <SearchCode size={73} color="white"/>
               <p className="text-xl text-white text-center break-words" style={{fontFamily:"'Robotomono',monospace"}}>
               Compile code to see output
               </p>
               </div>}
-            </pre>
+            </div>
             <DrawerFooter className="w-full flex items-start justify-start">
               <DrawerClose asChild>
                 <Button variant="default" className="text-red-300 border border-[2px] border border-red-600 hover:cursor-pointer hover:bg-white hover:text-primary">
@@ -201,13 +213,8 @@ export default function CompilerEditor() {
         defaultValue={`#include <stdio.h>
 
 int main() {
-    int shyam, ram, hello;
-    int a = 5 + 3;
-    int b = 10 + 20;
-    shyam = 5;
-    ram = 3;
-    hello = shyam + ram;
-    int c = a + b;
+      int a = 5 + 3;
+      printf("%d\\n", a);
     return 0;
 }
 `}

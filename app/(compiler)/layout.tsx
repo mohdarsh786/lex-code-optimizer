@@ -1,9 +1,5 @@
 export const metadata = { title: "Optimizer" }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <body className="bg-black min-h-screen">{children}</body>
-    </html>
-  )
+  return <div className="bg-black min-h-screen">{children}</div>
 }
