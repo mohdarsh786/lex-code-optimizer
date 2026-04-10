@@ -1,10 +1,13 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = "mongodb+srv://Compiler:Compilercode@cluster0.bdcu7fw.mongodb.net/Compiler?retryWrites=true&w=majority&appName=Cluster0";
+// Use process.env to access the variable from .env file
+const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
-  throw new Error("Missing MONGODB_URI");
+  throw new Error("Missing MONGODB_URI in environment variables");
 }
+
+/* ... rest of the file remains the same ... */
 
 /* ---------------- TYPES ---------------- */
 
