@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
 
+  useEffect(() => {
+    if (localStorage.getItem("auth_token")) {
+      router.push('/compiler')
+    }
+  }, [router]);
+
   const handleLogin = async (e:any) => {
     e.preventDefault();
     const respnse=await Signup({name:name,email:email,password:password})
@@ -22,6 +28,7 @@ export default function LoginPage() {
        toast.error("Already an Account")
     }
     else if(respnse==="Sign up successfull"){
+        localStorage.setItem("auth_token", "true")
         router.push("/compiler")
         toast.success("Sign up Successfull")
     }

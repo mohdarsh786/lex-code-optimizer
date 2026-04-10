@@ -4,11 +4,22 @@ import { Separator } from "@/components/ui/separator"
 import { Workflow } from "lucide-react"
 import ReactFlow from "reactflow"
 import "reactflow/dist/style.css"
-import { useMemo } from "react"
+import { useMemo, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Drawervalue } from "@/components/store"
+
+const nodeTypes = {}
+const edgeTypes = {}
 
 export default function VisualEditor() {
   const result = Drawervalue((v:any)=> v.optimizerResult)
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!localStorage.getItem("auth_token")) {
+      router.push("/login")
+    }
+  }, [router])
 
   const { nodes, edges } = useMemo(() => {
     if (!result) {
@@ -85,7 +96,7 @@ export default function VisualEditor() {
       )}
 
       <div style={{ width: "100%", height: "500px" }} className="bg-[#0b0b0f]">
-        <ReactFlow nodes={nodes} edges={edges} fitView/>
+        <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} fitView/>
       </div>
 
       {result && (

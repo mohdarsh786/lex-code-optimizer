@@ -41,6 +41,12 @@ export default function CompilerEditor() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
 
   useEffect(() => {
+    if (!localStorage.getItem("auth_token")) {
+      router.push("/login")
+    }
+  }, [router])
+
+  useEffect(() => {
     if (isHistoryOpen) {
       fetchHistory()
     }
@@ -198,7 +204,7 @@ export default function CompilerEditor() {
             <DropdownMenuGroup>
               <DropdownMenuLabel>System</DropdownMenuLabel>
               <DropdownMenuItem className="text-white"><User size={23} color="blue"/>Profile</DropdownMenuItem>
-              <DropdownMenuItem className="text-white"><RecycleIcon size={23} color="red"/>LogOut</DropdownMenuItem>
+              <DropdownMenuItem className="text-white" onClick={() => { localStorage.removeItem("auth_token"); router.push("/login"); }}><RecycleIcon size={23} color="red"/>LogOut</DropdownMenuItem>
               <DropdownMenuItem className="text-white"><ArrowBigRight size={23} color="orange"/>Editor</DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>

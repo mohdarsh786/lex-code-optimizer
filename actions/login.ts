@@ -11,6 +11,7 @@ export default async function Login(Userata:userrlogin){
     if(userata&&passwordcheck){
         return "Login successfull"
     }
+    return "Invalid password"
     }
     else{
         return "Sign Up"
