@@ -234,6 +234,7 @@ int main() {
           scrollBeyondLastLine: false,
           lineNumbers: "on",
           tabSize: 4,
+          scrollbar: { alwaysConsumeMouseWheel: false },
         }}
       />
 

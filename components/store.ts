@@ -1,5 +1,5 @@
 import {create} from 'zustand'
-import { usrlist } from '@/types/user'
+import { usrlist } from '@/types/user' 
 type userregister={
     name:string,
     password:string,
