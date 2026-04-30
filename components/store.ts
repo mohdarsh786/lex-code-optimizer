@@ -1,22 +1,21 @@
 import {create} from 'zustand'
 import { usrlist } from '@/types/user' 
+import type { OptimizerResult } from '@/types/compiler'
 type userregister={
-    name:string,
+    username:string,
     password:string,
-    email:string,
-    setname:(value:string)=>void,
+    setusername:(value:string)=>void,
     setpassword:(value:string)=>void,
-    setemail:(value:string)=>void
 }
 type userlogin={
     password:string,
-    email:string,
-    setemail:(value:string)=>void,
+    username:string,
+    setusername:(value:string)=>void,
     setpassword:(value:string)=>void
 }
 type searchname={
-    name:string,
-    setname:(value:string)=>void
+    username:string,
+    setusername:(value:string)=>void
 }
 type userlistttttt={
     users:usrlist[],
@@ -26,20 +25,11 @@ type userlistttttt={
     setremoveuser:(value:usrlist)=>void,
     setmessage:(value:string)=>void
 }
-interface OptimizerResult {
-  ir: string[]
-  dependencies: Record<string, number[]>
-  batches: number[][]
-  sequential: { results: Record<string, number>; time: number }
-  parallel: { results: Record<string, number>; time: number }
-  normal_output: { stdout: string; stderr: string }
-}
-
 interface StoreState {
   value: boolean
   setvlue: (v: boolean) => void
   optimizerResult: OptimizerResult | null
-  setOptimizerResult: (r: OptimizerResult) => void
+  setOptimizerResult: (r: OptimizerResult | null) => void
 }
 
 export const Drawervalue = create<StoreState>((set) => ({
@@ -49,26 +39,24 @@ export const Drawervalue = create<StoreState>((set) => ({
   setOptimizerResult: (r) => set({ optimizerResult: r }),
 }))
 export const Userregister=create<userregister>((set)=>({
-    name:"",
+    username:"",
     password:"",
-    email:"",
-    setname:(value)=>set(({name:value})),
+    setusername:(value)=>set(({username:value})),
     setpassword:(value)=>set(({password:value})),
-    setemail:(value)=>set(({email:value}))
 }))
 export const Userlogin=create<userlogin>((set)=>({
     password:"",
-    email:"",
-    setemail:(value)=>set(({email:value})),
+    username:"",
+    setusername:(value)=>set(({username:value})),
     setpassword:(value)=>set(({password:value}))
 }))
 export const Searchname=create<searchname>((set)=>({
-    name:"",
-    setname:(value)=>set((v)=>({name:value}))
+    username:"",
+    setusername:(value)=>set({username:value})
 }))
 export const Toklue=create<searchname>((set)=>({
-    name:"",
-    setname:(value)=>set(({name:value}))
+    username:"",
+    setusername:(value)=>set(({username:value}))
 }))
 export const Userlist=create<userlistttttt>((set)=>({
    users:[],

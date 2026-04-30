@@ -2,9 +2,9 @@
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Workflow } from "lucide-react"
-import ReactFlow from "reactflow"
+import ReactFlow, { type Edge, type Node } from "reactflow"
 import "reactflow/dist/style.css"
-import { useMemo, useEffect } from "react"
+import { useMemo, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Drawervalue } from "@/components/store"
 
@@ -12,13 +12,18 @@ const nodeTypes = {}
 const edgeTypes = {}
 
 export default function VisualEditor() {
-  const result = Drawervalue((v:any)=> v.optimizerResult)
+  const result = Drawervalue((value) => value.optimizerResult)
   const router = useRouter()
+  const [authStatus, setAuthStatus] = useState<"checking" | "authorized" | "unauthorized">("checking")
 
   useEffect(() => {
     if (!localStorage.getItem("auth_token")) {
-      router.push("/login")
+      setAuthStatus("unauthorized")
+      router.replace("/login")
+      return
     }
+
+    setAuthStatus("authorized")
   }, [router])
 
   const { nodes, edges } = useMemo(() => {
@@ -30,11 +35,11 @@ export default function VisualEditor() {
     }
 
     const batchColors = ["#166534", "#1e3a5f", "#4a1d6a", "#6b3410", "#1a4a4a"]
-    const n: any[] = []
-    const e: any[] = []
+    const n: Node[] = []
+    const e: Edge[] = []
 
-    result.batches.forEach((batch:any, batchIdx:any) => {
-      batch.forEach((stmtIdx:any, posInBatch:any) => {
+    result.batches.forEach((batch: number[], batchIdx: number) => {
+      batch.forEach((stmtIdx: number, posInBatch: number) => {
         n.push({
           id: String(stmtIdx),
           position: { x: 220 * posInBatch + 80, y: 160 * batchIdx + 80 },
@@ -66,11 +71,15 @@ export default function VisualEditor() {
     return { nodes: n, edges: e }
   }, [result])
 
+  if (authStatus !== "authorized") {
+    return <div className="min-h-screen bg-black" />
+  }
+
   return (
-    <ScrollArea className="min-h-screen w-full bg-black" style={{fontFamily:"'Robotomono',monospace"}}>
+    <ScrollArea className="min-h-screen w-full bg-black font-sans">
       <div className="h-[70px] w-full flex items-center justify-start px-8 gap-4">
         <Workflow size={30} color="white"/>
-        <div className="text-xl text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-white to-transparent" style={{fontFamily:"'Robotomono',monospace"}}>
+        <div className="text-xl text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-white to-transparent">
           Dependency Graph
         </div>
       </div>
@@ -79,10 +88,10 @@ export default function VisualEditor() {
       {result && (
         <div className="p-6">
           <div className="flex gap-4 mb-4 flex-wrap">
-            {result.batches.map((batch:any, i:any) => (
-              <div key={i} className="bg-zinc-900 rounded p-3 text-sm text-white">
+            {result.batches.map((batch: number[], i: number) => (
+              <div key={i} className="rounded bg-zinc-900 p-3 text-sm text-white">
                 <span className="text-zinc-400">batch {i}:</span>{" "}
-                {batch.map((idx:number) => result.ir[idx]).join(", ")}
+                {batch.map((idx: number) => result.ir[idx]).join(", ")}
               </div>
             ))}
           </div>
@@ -102,7 +111,7 @@ export default function VisualEditor() {
       {result && (
         <div className="p-6">
           <div className="text-sm text-zinc-400 mb-1">IR Code</div>
-          <pre className="bg-zinc-900 p-4 rounded text-green-400 text-sm font-mono">
+          <pre className="overflow-x-auto whitespace-pre-wrap rounded bg-zinc-900 p-4 font-mono text-sm text-green-400 [overflow-wrap:anywhere]">
             {result.ir.join("\n")}
           </pre>
         </div>

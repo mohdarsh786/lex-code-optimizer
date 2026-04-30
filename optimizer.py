@@ -1,5 +1,7 @@
 import sys
 import time
+import atexit
+import os
 from dataclasses import dataclass
 from concurrent.futures import ProcessPoolExecutor
 
@@ -186,6 +188,10 @@ def parse_line(tokens):
 
 
 _temp_counter = 0
+_POOL = None
+_MAX_WORKERS = max(1, os.cpu_count() or 1)
+_POOL_WARM = False
+_BURN_ITERATIONS = max(1, int(os.environ.get("OPTIMIZER_BURN_ITERATIONS", "8000000")))
 
 
 def lower_to_tac(target, operands, line_num):
@@ -252,6 +258,12 @@ def execute_stmt(stmt, var_store):
             return 0
         return int(operand) if operand.lstrip('-').isdigit() else var_store[operand]
 
+    # Every IR statement simulates CPU work so wide independent batches
+    # have something meaningful to parallelize in the demo.
+    x = 0
+    for _ in range(_BURN_ITERATIONS):
+        x += 1
+
     a = resolve(stmt.op1)
 
     if stmt.op2 is None:
@@ -259,33 +271,88 @@ def execute_stmt(stmt, var_store):
 
     b = resolve(stmt.op2)
 
-    # burn CPU so parallel vs sequential difference is measurable
-    x = 0
-    for _ in range(50_000_000):
-        x += 1
-
     return stmt.target, a + b
+
+
+def execute_batch(batch_stmts, var_store):
+    return [execute_stmt(stmt, var_store) for stmt in batch_stmts]
+
+
+def get_process_pool():
+    global _POOL
+    if _POOL is None:
+        _POOL = ProcessPoolExecutor(max_workers=_MAX_WORKERS)
+    return _POOL
+
+
+def _prime_worker():
+    return None
+
+
+def warm_process_pool():
+    global _POOL_WARM
+    if _POOL_WARM:
+        return
+
+    pool = get_process_pool()
+    futures = [pool.submit(_prime_worker) for _ in range(_MAX_WORKERS)]
+    for future in futures:
+        future.result()
+    _POOL_WARM = True
+
+
+def shutdown_process_pool():
+    global _POOL
+    if _POOL is not None:
+        _POOL.shutdown(wait=False, cancel_futures=True)
+        _POOL = None
+
+
+atexit.register(shutdown_process_pool)
+
+
+def chunked(values, chunk_count):
+    if not values:
+        return []
+
+    size = max(1, (len(values) + chunk_count - 1) // chunk_count)
+    return [values[index:index + size] for index in range(0, len(values), size)]
 
 
 def run_sequential(stmts):
     var_store = {}
-    start = time.time()
+    start = time.perf_counter()
     for s in stmts:
         target, val = execute_stmt(s, var_store)
         var_store[target] = val
-    return var_store, time.time() - start
+    return var_store, time.perf_counter() - start
 
 
 def run_parallel(stmts, batches):
     var_store = {}
-    start = time.time()
-    with ProcessPoolExecutor() as pool:
-        for batch in batches:
-            futures = [pool.submit(execute_stmt, stmts[i], var_store) for i in batch]
-            for f in futures:
-                target, val = f.result()
+    warm_process_pool()
+    pool = get_process_pool()
+    start = time.perf_counter()
+
+    for batch in batches:
+        if len(batch) <= 1:
+            for stmt_idx in batch:
+                target, val = execute_stmt(stmts[stmt_idx], var_store)
                 var_store[target] = val
-    return var_store, time.time() - start
+            continue
+
+        worker_count = min(len(batch), _MAX_WORKERS)
+        stmt_groups = [
+            [stmts[stmt_idx] for stmt_idx in stmt_group]
+            for stmt_group in chunked(batch, worker_count)
+        ]
+
+        futures = [pool.submit(execute_batch, stmt_group, var_store) for stmt_group in stmt_groups]
+        for future in futures:
+            for target, val in future.result():
+                var_store[target] = val
+
+    return var_store, time.perf_counter() - start
 
 
 if __name__ == "__main__":
